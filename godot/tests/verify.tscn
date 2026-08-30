@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/main.tscn" id="main"]
+[ext_resource type="Script" path="res://tests/verify.gd" id="verify"]
+
+[node name="VerifyRoot" type="Node"]
+
+[node name="Main" parent="." instance=ExtResource("main")]
+
+[node name="Verifier" type="Node" parent="."]
+script = ExtResource("verify")
