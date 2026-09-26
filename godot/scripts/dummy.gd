@@ -72,7 +72,7 @@ func _physics_process(delta: float) -> void:
 
 
 func take_damage() -> void:
-	set_state(State.hit)
+	force_state(State.hit)
 
 
 func force_state(state: State) -> void:

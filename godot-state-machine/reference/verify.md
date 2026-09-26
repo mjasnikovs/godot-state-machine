@@ -27,6 +27,10 @@ godot --headless tests/verify.tscn --quit-after 400
 A pass prints nothing: the harness runs 44 checks over 160 physics frames and quits
 itself with exit 0. A failure prints each failed check to stderr and exits 1.
 
+`--quit-after` counts main-loop iterations, and a pass ends at iteration 386, measured
+on 4.7.2 headless. If the engine quits first, `_exit_tree` prints the frame and phase
+it reached and exits 1, so a budget too small to finish cannot pass in silence.
+
 ```
 FAIL  player registered itself in Global
 FAIL  1 failures out of 44 checks (phase: jumping)
@@ -43,7 +47,7 @@ though Godot then runs until `--quit-after`.
 | enum / animation contract | every key of both enums has an animation of that exact name |
 | loop modes | every blocked state is non-looping, every free state loops |
 | input drives the state | held input reaches `State.walk`, released input reaches `State.idle`, the playing animation equals `State.keys()[c_state]` |
-| blocking | `set_state` and `take_damage` are both refused mid-attack, and the state survives to the end of the animation |
+| blocking | `set_state` is refused mid-attack, `take_damage` lands through `force_state` and is refused inside its invincibility buffer, and the blocked state survives mid-animation |
 | force_state | `animation_finished` returns to idle unaided, and `force_state` overrides a blocked state |
 | method track | the track fired `play_sfx`, which picked a sound from the current state's array |
 | air states | jump, fall and landing each reach their state |
@@ -94,6 +98,7 @@ var _failures: Array[String] = []
 var _checks: int = 0
 var _frame: int = 0
 var _phase: String = "startup"
+var _finished: bool = false
 
 var _player_idle_position: float = 0.0
 var _dummy_walk_position: float = 0.0
@@ -164,7 +169,7 @@ func _physics_process(_delta: float) -> void:
 			str(Player.State.keys()[player.c_state])
 		)
 	elif _frame == 31:
-		player.set_state(Player.State.idle)
+		player.set_state(Player.State.hit)
 		_check(
 			"set_state is refused while a blocked state is current",
 			player.c_state == Player.State.attack,
@@ -172,14 +177,14 @@ func _physics_process(_delta: float) -> void:
 		)
 		player.take_damage()
 		_check(
-			"take_damage is swallowed during attack (it goes through set_state)",
-			player.c_state == Player.State.attack,
+			"take_damage lands mid-attack (it goes through force_state)",
+			player.c_state == Player.State.hit,
 			str(Player.State.keys()[player.c_state])
 		)
-	elif _frame == 40:
+	elif _frame == 36:
 		_check(
 			"the blocked state is still running mid-animation",
-			player.c_state == Player.State.attack,
+			player.c_state == Player.State.hit,
 			str(Player.State.keys()[player.c_state])
 		)
 	elif _frame == 55:
@@ -188,13 +193,13 @@ func _physics_process(_delta: float) -> void:
 			player.c_state == Player.State.idle,
 			str(Player.State.keys()[player.c_state])
 		)
-		player.block_invicibility_time = 0.0
 		player.take_damage()
 		_check(
-			"take_damage enters State.hit when nothing blocks it",
-			player.c_state == Player.State.hit,
-			str(Player.State.keys()[player.c_state])
+			"take_damage is refused while invincibility_buffer_time runs",
+			player.c_state == Player.State.idle,
+			"%s, buffer %f" % [Player.State.keys()[player.c_state], player.invincibility_buffer_time]
 		)
+		player.attack()
 	elif _frame == 56:
 		player.force_state(Player.State.idle)
 		_check(
@@ -268,6 +273,14 @@ func _physics_process(_delta: float) -> void:
 		_report_and_quit()
 
 
+# --quit-after tears the tree down without asking, so a run cut short would otherwise pass in silence.
+func _exit_tree() -> void:
+	if _finished:
+		return
+	printerr("FAIL  torn down at physics frame %d before the last check (phase: %s)" % [_frame, _phase])
+	get_tree().quit(1)
+
+
 func _check(label: String, condition: bool, detail: String = "") -> void:
 	_checks += 1
 	if condition:
@@ -310,6 +323,7 @@ func _check_animation_contract() -> void:
 
 
 func _report_and_quit() -> void:
+	_finished = true
 	if _failures.is_empty():
 		get_tree().quit(0)
 		return

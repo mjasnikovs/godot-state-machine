@@ -13,6 +13,7 @@ var _failures: Array[String] = []
 var _checks: int = 0
 var _frame: int = 0
 var _phase: String = "startup"
+var _finished: bool = false
 
 var _player_idle_position: float = 0.0
 var _dummy_walk_position: float = 0.0
@@ -83,7 +84,7 @@ func _physics_process(_delta: float) -> void:
 			str(Player.State.keys()[player.c_state])
 		)
 	elif _frame == 31:
-		player.set_state(Player.State.idle)
+		player.set_state(Player.State.hit)
 		_check(
 			"set_state is refused while a blocked state is current",
 			player.c_state == Player.State.attack,
@@ -91,14 +92,14 @@ func _physics_process(_delta: float) -> void:
 		)
 		player.take_damage()
 		_check(
-			"take_damage is swallowed during attack (it goes through set_state)",
-			player.c_state == Player.State.attack,
+			"take_damage lands mid-attack (it goes through force_state)",
+			player.c_state == Player.State.hit,
 			str(Player.State.keys()[player.c_state])
 		)
-	elif _frame == 40:
+	elif _frame == 36:
 		_check(
 			"the blocked state is still running mid-animation",
-			player.c_state == Player.State.attack,
+			player.c_state == Player.State.hit,
 			str(Player.State.keys()[player.c_state])
 		)
 	elif _frame == 55:
@@ -107,13 +108,13 @@ func _physics_process(_delta: float) -> void:
 			player.c_state == Player.State.idle,
 			str(Player.State.keys()[player.c_state])
 		)
-		player.block_invicibility_time = 0.0
 		player.take_damage()
 		_check(
-			"take_damage enters State.hit when nothing blocks it",
-			player.c_state == Player.State.hit,
-			str(Player.State.keys()[player.c_state])
+			"take_damage is refused while invincibility_buffer_time runs",
+			player.c_state == Player.State.idle,
+			"%s, buffer %f" % [Player.State.keys()[player.c_state], player.invincibility_buffer_time]
 		)
+		player.attack()
 	elif _frame == 56:
 		player.force_state(Player.State.idle)
 		_check(
@@ -187,6 +188,14 @@ func _physics_process(_delta: float) -> void:
 		_report_and_quit()
 
 
+# --quit-after tears the tree down without asking, so a run cut short would otherwise pass in silence.
+func _exit_tree() -> void:
+	if _finished:
+		return
+	printerr("FAIL  torn down at physics frame %d before the last check (phase: %s)" % [_frame, _phase])
+	get_tree().quit(1)
+
+
 func _check(label: String, condition: bool, detail: String = "") -> void:
 	_checks += 1
 	if condition:
@@ -229,6 +238,7 @@ func _check_animation_contract() -> void:
 
 
 func _report_and_quit() -> void:
+	_finished = true
 	if _failures.is_empty():
 		get_tree().quit(0)
 		return

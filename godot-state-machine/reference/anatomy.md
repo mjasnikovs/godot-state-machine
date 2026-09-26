@@ -31,8 +31,6 @@ requires. The `.tscn` node line carries `node_paths=PackedStringArray("direction
 
 ```gdscript
 class_name Player extends CharacterBody2D
-# Input-driven character. The whole state machine is the enum, BLOCKED_STATES,
-# c_state, and force_state / set_state / set_animation.
 
 enum Direction { left = -1, right = 1 }
 enum State { idle, walk, jump, fall, attack, hit }
@@ -42,7 +40,7 @@ const BLOCKED_STATES: Array[State] = [State.attack, State.hit]
 
 const SPEED: float = 100.0
 const JUMP_VELOCITY: float = -300.0
-const INVICIBILITY_TIME: float = 0.5
+const INVINCIBILITY_BUFFER_TIME: float = 0.5
 
 @export_category("Nodes")
 @export var directional: Node2D
@@ -51,7 +49,7 @@ const INVICIBILITY_TIME: float = 0.5
 var c_direction: Direction = Direction.right
 var c_state: State = State.idle
 var on_floor: bool = false
-var block_invicibility_time: float = 0.0
+var invincibility_buffer_time: float = 0.0
 
 
 func _ready() -> void:
@@ -68,7 +66,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	on_floor = is_on_floor()
-	block_invicibility_time = maxf(0.0, block_invicibility_time - delta)
+	invincibility_buffer_time = maxf(0.0, invincibility_buffer_time - delta)
 
 	if !on_floor:
 		velocity += get_gravity() * delta
@@ -89,7 +87,6 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = float(c_direction) * SPEED
 
-	# One if/elif chain, highest priority first, right before move_and_slide.
 	if Input.is_action_just_pressed(&"attack"):
 		attack()
 	elif on_floor and !is_zero_approx(axis_direction):
@@ -109,14 +106,13 @@ func attack() -> void:
 
 
 func take_damage() -> void:
-	if block_invicibility_time > 0.0:
+	if invincibility_buffer_time > 0.0:
 		return
-	block_invicibility_time = INVICIBILITY_TIME
-	set_state(State.hit)
+	invincibility_buffer_time = INVINCIBILITY_BUFFER_TIME
+	force_state(State.hit)
 
 
-# Ignores BLOCKED_STATES. Two callers: the animation_finished reset, and damage that
-# must land whatever the state.
+# Ignores BLOCKED_STATES, so two callers in game code: the animation_finished reset and damage that must land.
 func force_state(state: State) -> void:
 	c_state = state
 	set_animation()
@@ -233,7 +229,7 @@ func _physics_process(delta: float) -> void:
 
 
 func take_damage() -> void:
-	set_state(State.hit)
+	force_state(State.hit)
 
 
 func force_state(state: State) -> void:

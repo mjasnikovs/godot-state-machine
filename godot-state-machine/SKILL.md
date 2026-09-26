@@ -54,8 +54,7 @@ var c_state: State = State.idle
 ## The three functions
 
 ```gdscript
-# Ignores BLOCKED_STATES. Two callers: the animation_finished reset, and damage that
-# must land whatever the state.
+# Ignores BLOCKED_STATES, so two callers in game code: the animation_finished reset and damage that must land.
 func force_state(state: State) -> void:
 	c_state = state
 	set_animation()
@@ -77,8 +76,8 @@ func set_animation() -> void:
 
 Everything that wants to change state calls `set_state`. Nothing assigns `c_state`.
 
-`force_state` is the only way past a blocked state, and it has exactly two callers: the
-`animation_finished` reset below, and damage that must land whatever the state.
+`force_state` is the only way past a blocked state, and it has two callers in game code:
+the `animation_finished` reset below, and damage that must land whatever the state.
 
 ## The release valve
 
@@ -145,11 +144,11 @@ Measured, not guessed. Numbers and method in `reference/traps.md`.
 | # | Trap | Symptom | Fix |
 |---|---|---|---|
 | 1 | Blocked state with a looping animation | character frozen in that state forever | `loop_mode = 0` on every blocked state |
-| 2 | `take_damage` calls `set_state` | damage taken mid-attack is silently ignored | intended; use `force_state` for damage that must land |
+| 2 | `take_damage` calls `set_state` | damage taken mid-attack is silently ignored | damage that must land calls `force_state`, behind an invincibility buffer |
 | 3 | Enum key with no animation | crashes the first time that state is entered, not at load | assert in `set_animation`, plus a test over `State.keys()` |
 | 4 | Asserting on a method track the same tick | the call has not happened yet | AnimationPlayer runs on the **idle** clock and method tracks default to **deferred** |
 | 5 | Adding `state == c_state` to stop restarts | fixes nothing that was broken | `play(X)` while X already plays keeps its position; it is an early-out, not a repair |
-| 6 | A third caller of `force_state` | `BLOCKED_STATES` stops being a guarantee and becomes a suggestion | two callers only: the `animation_finished` reset and damage that must land; anything else that must interrupt a blocked state is a state that is not blocked |
+| 6 | A third caller of `force_state` | `BLOCKED_STATES` stops being a guarantee and becomes a suggestion | two callers in game code: the `animation_finished` reset and damage that must land; anything else that must interrupt a blocked state is a state that is not blocked |
 
 Trap 1 is the one that ships. Trap 2 is the one that gets argued about.
 

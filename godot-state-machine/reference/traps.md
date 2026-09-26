@@ -27,16 +27,21 @@ Nothing in the editor warns about it. The test checks it instead:
 
 ## 2. A blocked state swallows damage
 
-`take_damage` ends in `set_state(State.hit)`. `set_state` refuses while `attack` is
+A `take_damage` that ends in `set_state(State.hit)` is refused while `attack` is
 current. So damage taken mid-attack changes nothing — no hit animation, no flash, and
 whatever else `take_damage` did before that line already happened.
 
-Measured: `attack()` on one frame, `take_damage()` on the next, `c_state` is still
-`State.attack`.
+Measured: `attack()` on one frame, `set_state(State.hit)` on the next, `c_state` is
+still `State.attack`.
 
-This is the design working, not a bug. It is what makes an attack feel committed. If
-one specific source of damage must always land, that caller uses `force_state`. It is
-the second of the two callers allowed (trap 6).
+Refusing it can be the design: it makes an attack feel committed. Damage that must
+land calls `force_state` instead, the second of the two callers allowed (trap 6), and
+both characters here do. The player's `take_damage` first checks
+`invincibility_buffer_time`, so the buffer, not `BLOCKED_STATES`, decides when the
+next hit can land.
+
+Measured: `take_damage()` mid-attack enters `State.hit`. A second one 24 physics
+frames later, inside the 0.5 s buffer, changes nothing.
 
 ## 3. A missing animation crashes on entry, not on load
 
@@ -91,10 +96,11 @@ So both variants of `set_state` are correct. Add `state == c_state` to skip redu
 work, leave it out to keep the function to one rule. The input-driven character in
 this project leaves it out, and its idle animation runs normally.
 
-## 6. force_state has exactly two callers
+## 6. force_state has two callers in game code
 
 The `animation_finished` reset, and damage that must land whatever the state. That is
-`godot-code-style`'s rule (`reference/naming.md`).
+`godot-code-style`'s rule (`reference/naming.md`). The test harness calling it to
+reach a state is not a third.
 
 The moment a third caller uses `force_state`, `BLOCKED_STATES` stops being a
 guarantee and becomes a suggestion. Reviewing the machine is then a search across the

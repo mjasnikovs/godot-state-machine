@@ -33,8 +33,8 @@ func set_state(state: State) -> void:
 	set_animation()
 ```
 
-And one signal is the normal way out of them. `force_state` has one other caller:
-damage that must land whatever the state.
+And one signal is the normal way out of them. `force_state` has two callers in game
+code: that signal, and damage that must land whatever the state.
 
 ```gdscript
 	var _error: int = animation.animation_finished.connect(
@@ -49,11 +49,11 @@ That is the whole machine. Adding a state is one enum key, one animation, one `e
 | # | Trap | Symptom | Fix |
 |---|---|---|---|
 | 1 | Blocked state with a looping animation | character frozen in that state forever | `loop_mode = 0` on every blocked state |
-| 2 | `take_damage` calls `set_state` | damage taken mid-attack is silently ignored | intended; use `force_state` for damage that must land |
+| 2 | `take_damage` calls `set_state` | damage taken mid-attack is silently ignored | damage that must land calls `force_state`, behind an invincibility buffer |
 | 3 | Enum key with no animation | crashes the first time that state is entered, not at load | assert in `set_animation`, plus a test over `State.keys()` |
 | 4 | Asserting on a method track the same tick | the call has not happened yet | the AnimationPlayer runs on the idle clock and method tracks are deferred — measured 7 physics frames late |
 | 5 | Adding `state == c_state` to stop restarts | fixes nothing that was broken | `play(X)` while X already plays keeps its position — measured |
-| 6 | A third caller of `force_state` | `BLOCKED_STATES` stops being a guarantee and becomes a suggestion | two callers only: the `animation_finished` reset and damage that must land; anything else that must interrupt a blocked state is a state that is not blocked |
+| 6 | A third caller of `force_state` | `BLOCKED_STATES` stops being a guarantee and becomes a suggestion | two callers in game code: the `animation_finished` reset and damage that must land; anything else that must interrupt a blocked state is a state that is not blocked |
 
 Trap 1 is the one that ships. Trap 2 is the one that gets argued about.
 
@@ -63,7 +63,8 @@ Needs Godot 4.7.2 or newer, and gdtoolkit 4.5.0 for `gdformat` and `gdlint`.
 
 ```sh
 cd godot
-godot                                            # play
+godot --headless --import                             # once
+godot                                                 # play
 gdformat --check scripts/ tests/
 gdlint scripts/ tests/
 godot --headless tests/verify.tscn --quit-after 400   # silent + exit 0 = pass
@@ -78,7 +79,7 @@ with its `.gdlintrc` and `.gdformatrc`.
 
 ## Read it
 
-- **[godot-state-machine/SKILL.md](godot-state-machine/SKILL.md)** — the whole technique in 172 lines. Start here.
+- **[godot-state-machine/SKILL.md](godot-state-machine/SKILL.md)** — the whole technique in 171 lines. Start here.
 - [godot-state-machine/reference/anatomy.md](godot-state-machine/reference/anatomy.md) — both full scripts, direction
   flipping, per-state sound through an animation method track, scene wiring.
 - [godot-state-machine/reference/traps.md](godot-state-machine/reference/traps.md) — the measurements behind the
@@ -98,7 +99,7 @@ ln -s "$PWD/godot-state-machine" ~/.agents/skills/godot-state-machine   # shared
 ```
 
 It then fires on its own when you work on a Godot character state machine. Only the
-172-line `SKILL.md` sits in context; the reference files load on demand.
+171-line `SKILL.md` sits in context; the reference files load on demand.
 
 It is also just markdown. Read it directly if you would rather not install anything.
 
