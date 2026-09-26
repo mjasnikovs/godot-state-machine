@@ -1,7 +1,4 @@
 class_name Dummy extends CharacterBody2D
-# No input. Same machine as player.gd, with the two differences that matter:
-# set_state also refuses a repeat of the current state, and an AnimationPlayer
-# method track calls play_sfx at the exact frame the sound belongs on.
 
 enum Direction { left = -1, right = 1 }
 enum State { idle, walk, hit }
@@ -80,8 +77,7 @@ func force_state(state: State) -> void:
 	set_animation()
 
 
-# Also refuses a repeat of the current state: an early-out, not a fix, since
-# play() on the animation already playing does not restart it.
+# The repeat check is an early-out, not a fix: play() on the animation already playing does not restart it.
 func set_state(state: State) -> void:
 	if BLOCKED_STATES.has(c_state) or state == c_state:
 		return

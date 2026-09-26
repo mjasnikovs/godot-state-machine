@@ -109,7 +109,7 @@ a test rather than trusting the editor — `reference/verify.md`.
 One `if`/`elif` chain, highest priority first, immediately before `move_and_slide`.
 
 ```gdscript
-	if Input.is_action_just_pressed(&"attack"):
+	if Input.is_action_just_pressed(&"button_b"):
 		attack()
 	elif on_floor and !is_zero_approx(axis_direction):
 		set_state(State.walk)

@@ -71,10 +71,10 @@ func _physics_process(delta: float) -> void:
 	if !on_floor:
 		velocity += get_gravity() * delta
 
-	if on_floor and Input.is_action_just_pressed(&"jump"):
+	if on_floor and Input.is_action_just_pressed(&"button_a"):
 		velocity.y = JUMP_VELOCITY
 
-	var axis_direction: float = Input.get_axis(&"move_left", &"move_right")
+	var axis_direction: float = Input.get_axis(&"dpad_left", &"dpad_right")
 	if axis_direction > 0.0:
 		set_direction(Direction.right)
 	elif axis_direction < 0.0:
@@ -87,7 +87,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = float(c_direction) * SPEED
 
-	if Input.is_action_just_pressed(&"attack"):
+	if Input.is_action_just_pressed(&"button_b"):
 		attack()
 	elif on_floor and !is_zero_approx(axis_direction):
 		set_state(State.walk)
@@ -156,9 +156,6 @@ early-out, not a fix (`traps.md`, trap 5). And an AnimationPlayer method track c
 
 ```gdscript
 class_name Dummy extends CharacterBody2D
-# No input. Same machine as player.gd, with the two differences that matter:
-# set_state also refuses a repeat of the current state, and an AnimationPlayer
-# method track calls play_sfx at the exact frame the sound belongs on.
 
 enum Direction { left = -1, right = 1 }
 enum State { idle, walk, hit }
@@ -237,8 +234,7 @@ func force_state(state: State) -> void:
 	set_animation()
 
 
-# Also refuses a repeat of the current state: an early-out, not a fix, since
-# play() on the animation already playing does not restart it.
+# The repeat check is an early-out, not a fix: play() on the animation already playing does not restart it.
 func set_state(state: State) -> void:
 	if BLOCKED_STATES.has(c_state) or state == c_state:
 		return

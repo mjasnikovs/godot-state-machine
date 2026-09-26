@@ -70,8 +70,9 @@ gdlint scripts/ tests/
 godot --headless tests/verify.tscn --quit-after 400   # silent + exit 0 = pass
 ```
 
-Controls: `A`/`D` or arrows to move, `Space` to jump, `J` to attack. The blue square is
-the input-driven character, the other one patrols on its own.
+Controls: `A`/`D` or the arrows move (`dpad_left`/`dpad_right`), `Space` jumps
+(`button_a`), `J` attacks (`button_b`). The `Player` node is input-driven; the `Dummy`
+node patrols on its own.
 
 All 49 GDScript warnings are set to **error**, and nothing is suppressed. The scripts
 follow the [godot-code-style](https://github.com/mjasnikovs/godot-code-style) skill,

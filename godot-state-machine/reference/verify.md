@@ -31,9 +31,15 @@ itself with exit 0. A failure prints each failed check to stderr and exits 1.
 on 4.7.2 headless. If the engine quits first, `_exit_tree` prints the frame and phase
 it reached and exits 1, so a budget too small to finish cannot pass in silence.
 
+A character that never registers stops the run at physics frame 2, before any check
+reads through the missing reference. Measured on 4.7.2 headless, with
+`Global.register_player(self)` deleted from `player.gd`, exit code 1:
+
 ```
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
 FAIL  player registered itself in Global
-FAIL  1 failures out of 44 checks (phase: jumping)
+FAIL  1 failures out of 5 checks (phase: startup)
 ```
 
 The gate is output and exit code together, the same one `godot-code-style` uses. A
@@ -84,13 +90,6 @@ And the loop-mode group, which catches trap 1 before it ships.
 
 ```gdscript
 class_name Verify extends Node
-# Headless self-test for the enum state machine:
-#
-#     godot --headless tests/verify.tscn --quit-after 400
-#
-# Silent on a pass, and it quits itself with exit 0. A failed check is written
-# to stderr and the exit is 1. Any output at all, a parse error included, is a
-# failure.
 
 const SCRIPTS_DIR: String = "res://scripts/"
 
@@ -107,8 +106,7 @@ var _dummy_position_after_repeat: float = 0.0
 var _sfx_calls_before_hit: int = 0
 
 
-# The main scene loads only the scripts it reaches. Loading each one by path, with
-# the autoload registered, is what catches one nothing else loads.
+# The main scene loads only the scripts it reaches, so each one is loaded here by path.
 func _ready() -> void:
 	var dir: DirAccess = DirAccess.open(SCRIPTS_DIR)
 	assert(dir, "verify.gd - cannot open " + SCRIPTS_DIR)
@@ -127,12 +125,16 @@ func _physics_process(_delta: float) -> void:
 	if _frame == 2:
 		_check("player registered itself in Global", player != null)
 		_check("dummy registered itself in Global", dummy != null)
+		# Every later check reads through both refs, so one missing is reported once instead of as a cascade.
+		if !player or !dummy:
+			_report_and_quit()
+			return
 		_check_animation_contract()
 		_phase = "walking"
-		Input.action_press(&"move_right")
+		Input.action_press(&"dpad_right")
 	elif _frame == 20:
 		_check(
-			"holding move_right puts the player in State.walk",
+			"holding dpad_right puts the player in State.walk",
 			player.c_state == Player.State.walk,
 			str(Player.State.keys()[player.c_state])
 		)
@@ -141,7 +143,7 @@ func _physics_process(_delta: float) -> void:
 			player.animation.current_animation == &"walk",
 			str(player.animation.current_animation)
 		)
-		Input.action_release(&"move_right")
+		Input.action_release(&"dpad_right")
 	elif _frame == 30:
 		_check(
 			"releasing input returns the player to State.idle",
@@ -249,9 +251,9 @@ func _physics_process(_delta: float) -> void:
 		)
 
 		_phase = "jumping"
-		Input.action_press(&"jump")
+		Input.action_press(&"button_a")
 	elif _frame == 78:
-		Input.action_release(&"jump")
+		Input.action_release(&"button_a")
 	elif _frame == 82:
 		_check(
 			"rising off the floor is State.jump",
