@@ -13,7 +13,9 @@ description: >
 
 # Character state machine (Godot 4)
 
-Verified against Godot 4.7.2 by building the project and measuring the result.
+Verified against Godot 4.7.2 by building the project and measuring the result. Every
+script follows the `godot-code-style` skill: all 49 warnings are errors, nothing is
+suppressed, and `gdformat` and `gdlint` run with its configs.
 
 No state nodes, no `StateMachine` class, no `State` scripts. One enum, one variable,
 three functions, all on the character script itself. A 6-state character is about 25
@@ -38,10 +40,10 @@ exactly, and an `assert` catches a missing one the first time that state is ente
 ```gdscript
 class_name Player extends CharacterBody2D
 
-enum State {idle, walk, jump, fall, attack, hit}
+enum State { idle, walk, jump, fall, attack, hit }
 
-## States that must play to the end. set_state refuses while one is current.
-const blocked_states: Array[State] = [State.attack, State.hit]
+# States that must play to the end. set_state refuses while one is current.
+const BLOCKED_STATES: Array[State] = [State.attack, State.hit]
 
 @export var animation: AnimationPlayer
 
@@ -51,15 +53,15 @@ var c_state: State = State.idle
 ## The three functions
 
 ```gdscript
-## Ignores blocked_states. Only the animation_finished callback uses it.
+# Ignores BLOCKED_STATES. Only the animation_finished callback uses it.
 func force_state(state: State) -> void:
 	c_state = state
 	set_animation()
 
 
-## The normal door. Refuses while a blocked state is playing.
+# The normal door. Refuses while a blocked state is playing.
 func set_state(state: State) -> void:
-	if blocked_states.has(c_state):
+	if BLOCKED_STATES.has(c_state):
 		return
 	c_state = state
 	set_animation()
@@ -67,10 +69,7 @@ func set_state(state: State) -> void:
 
 func set_animation() -> void:
 	var new_anim: StringName = State.keys()[c_state]
-	assert(
-		animation.has_animation(new_anim),
-		"player.gd - animation player has no animation named '" + new_anim + "'"
-	)
+	assert(animation.has_animation(new_anim), "player.gd - animation player has no animation named '" + new_anim + "'")
 	animation.play(new_anim)
 ```
 
@@ -82,10 +81,9 @@ Everything that wants to change state calls `set_state`. Nothing assigns `c_stat
 
 ```gdscript
 func _ready() -> void:
-	animation.play("idle")
-	@warning_ignore("return_value_discarded")
-	animation.animation_finished.connect(func(_anim_name: StringName) -> void:
-		force_state(State.idle)
+	animation.play(&"idle")
+	var _error: int = animation.animation_finished.connect(
+		func(_anim_name: StringName) -> void: force_state(State.idle)
 	)
 ```
 
@@ -107,32 +105,31 @@ a test rather than trusting the editor — `reference/verify.md`.
 One `if`/`elif` chain, highest priority first, immediately before `move_and_slide`.
 
 ```gdscript
-	if Input.is_action_just_pressed("attack"):
+	if Input.is_action_just_pressed(&"attack"):
 		attack()
-	elif on_floor and not is_zero_approx(axis_direction):
+	elif on_floor and !is_zero_approx(axis_direction):
 		set_state(State.walk)
 	elif on_floor and is_zero_approx(axis_direction):
 		set_state(State.idle)
-	elif not on_floor and velocity.y < 0.0:
+	elif !on_floor and velocity.y < 0.0:
 		set_state(State.jump)
-	elif not on_floor and velocity.y > 0.0:
+	elif !on_floor and velocity.y > 0.0:
 		set_state(State.fall)
 
-	@warning_ignore("return_value_discarded")
-	move_and_slide()
+	var _collided: bool = move_and_slide()
 ```
 
 A character with no input collapses the chain to one line:
 
 ```gdscript
-	set_state(State.walk if not is_zero_approx(velocity.x) else State.idle)
+	set_state(State.walk if !is_zero_approx(velocity.x) else State.idle)
 ```
 
 Movement can read the machine back. Zero the horizontal speed while a blocked state
 runs, so an attack does not slide:
 
 ```gdscript
-	if blocked_states.has(c_state) and on_floor:
+	if BLOCKED_STATES.has(c_state) and on_floor:
 		velocity.x = move_toward(velocity.x, 0.0, SPEED)
 ```
 
@@ -152,12 +149,13 @@ Trap 1 is the one that ships. Trap 2 is the one that gets argued about.
 
 ## Build order
 
-1. Enum, `blocked_states`, `c_state`, the three functions.
+1. Enum, `BLOCKED_STATES`, `c_state`, the three functions.
 2. AnimationPlayer with one animation per enum key, named identically.
 3. Loop mode per the table above.
-4. `animation.play("idle")` and the `animation_finished` lambda in `_ready`.
+4. `animation.play(&"idle")` and the `animation_finished` lambda in `_ready`.
 5. The `if`/`elif` chain at the end of `_physics_process`.
-6. Wire nodes with `@export` node paths and assert them in `_ready`.
+6. Wire nodes with `@export` slots and assert them in `_ready`. The `.tscn` node line
+   needs `node_paths=PackedStringArray(...)` or the slots read back `null`.
 7. Copy the test harness from `reference/verify.md` and keep it green.
 
 ## Reference

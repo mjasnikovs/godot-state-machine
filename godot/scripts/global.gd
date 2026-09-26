@@ -1,7 +1,14 @@
 extends Node
-
-## Autoload. Nodes register themselves here in _ready, so nothing needs a
-## hardcoded get_node("A/B/C") chain that breaks on a rename.
+# Each character registers itself here in _ready, so no script needs a scene path
+# to reach it.
 
 var player: Player = null
 var dummy: Dummy = null
+
+
+func register_player(node: Player) -> void:
+	player = node
+
+
+func register_dummy(node: Dummy) -> void:
+	dummy = node

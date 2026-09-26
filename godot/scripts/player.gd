@@ -1,13 +1,12 @@
 class_name Player extends CharacterBody2D
+# Input-driven character. The whole state machine is the enum, BLOCKED_STATES,
+# c_state, and force_state / set_state / set_animation.
 
-## Input-driven character. The whole state machine is the enum, the
-## blocked_states list, c_state, and the three functions at the bottom.
+enum Direction { left = -1, right = 1 }
+enum State { idle, walk, jump, fall, attack, hit }
 
-enum Direction {left = -1, right = 1}
-enum State {idle, walk, jump, fall, attack, hit}
-
-## States that must play to the end. set_state refuses while one is current.
-const blocked_states: Array[State] = [State.attack, State.hit]
+# States that must play to the end. set_state refuses while one is current.
+const BLOCKED_STATES: Array[State] = [State.attack, State.hit]
 
 const SPEED: float = 100.0
 const JUMP_VELOCITY: float = -300.0
@@ -27,12 +26,11 @@ func _ready() -> void:
 	assert(directional, "player.gd - @export directional is not set in the editor on: " + self.name)
 	assert(animation, "player.gd - @export animation is not set in the editor on: " + self.name)
 
-	Global.player = self
+	Global.register_player(self)
 
-	animation.play("idle")
-	@warning_ignore("return_value_discarded")
-	animation.animation_finished.connect(func(_anim_name: StringName) -> void:
-		force_state(State.idle)
+	animation.play(&"idle")
+	var _error: int = animation.animation_finished.connect(
+		func(_anim_name: StringName) -> void: force_state(State.idle)
 	)
 
 
@@ -40,19 +38,19 @@ func _physics_process(delta: float) -> void:
 	on_floor = is_on_floor()
 	block_invicibility_time = maxf(0.0, block_invicibility_time - delta)
 
-	if not on_floor:
+	if !on_floor:
 		velocity += get_gravity() * delta
 
-	if on_floor and Input.is_action_just_pressed("jump"):
+	if on_floor and Input.is_action_just_pressed(&"jump"):
 		velocity.y = JUMP_VELOCITY
 
-	var axis_direction: float = Input.get_axis("move_left", "move_right")
+	var axis_direction: float = Input.get_axis(&"move_left", &"move_right")
 	if axis_direction > 0.0:
 		set_direction(Direction.right)
 	elif axis_direction < 0.0:
 		set_direction(Direction.left)
 
-	if blocked_states.has(c_state) and on_floor:
+	if BLOCKED_STATES.has(c_state) and on_floor:
 		velocity.x = move_toward(velocity.x, 0.0, SPEED)
 	elif is_zero_approx(axis_direction):
 		velocity.x = move_toward(velocity.x, 0.0, SPEED)
@@ -60,19 +58,18 @@ func _physics_process(delta: float) -> void:
 		velocity.x = float(c_direction) * SPEED
 
 	# One if/elif chain, highest priority first, right before move_and_slide.
-	if Input.is_action_just_pressed("attack"):
+	if Input.is_action_just_pressed(&"attack"):
 		attack()
-	elif on_floor and not is_zero_approx(axis_direction):
+	elif on_floor and !is_zero_approx(axis_direction):
 		set_state(State.walk)
 	elif on_floor and is_zero_approx(axis_direction):
 		set_state(State.idle)
-	elif not on_floor and velocity.y < 0.0:
+	elif !on_floor and velocity.y < 0.0:
 		set_state(State.jump)
-	elif not on_floor and velocity.y > 0.0:
+	elif !on_floor and velocity.y > 0.0:
 		set_state(State.fall)
 
-	@warning_ignore("return_value_discarded")
-	move_and_slide()
+	var _collided: bool = move_and_slide()
 
 
 func attack() -> void:
@@ -86,15 +83,15 @@ func take_damage() -> void:
 	set_state(State.hit)
 
 
-## Ignores blocked_states. Only the animation_finished callback uses it.
+# Ignores BLOCKED_STATES. Only the animation_finished callback uses it.
 func force_state(state: State) -> void:
 	c_state = state
 	set_animation()
 
 
-## The normal door. Refuses while a blocked state is playing.
+# The normal door. Refuses while a blocked state is playing.
 func set_state(state: State) -> void:
-	if blocked_states.has(c_state):
+	if BLOCKED_STATES.has(c_state):
 		return
 	c_state = state
 	set_animation()
@@ -102,10 +99,7 @@ func set_state(state: State) -> void:
 
 func set_animation() -> void:
 	var new_anim: StringName = State.keys()[c_state]
-	assert(
-		animation.has_animation(new_anim),
-		"player.gd - animation player has no animation named '" + new_anim + "'"
-	)
+	assert(animation.has_animation(new_anim), "player.gd - animation player has no animation named '" + new_anim + "'")
 	animation.play(new_anim)
 
 

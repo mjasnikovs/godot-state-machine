@@ -21,6 +21,17 @@ jobs:
           chmod +x /usr/local/bin/godot
           godot --version
 
+      - name: Install gdtoolkit
+        run: pip install "gdtoolkit==4.5.0"
+
+      - name: Format
+        working-directory: godot
+        run: gdformat --check scripts/ tests/
+
+      - name: Lint
+        working-directory: godot
+        run: gdlint scripts/ tests/
+
       - name: Import assets
         working-directory: godot
         run: godot --headless --import
@@ -28,9 +39,9 @@ jobs:
       - name: Compile with warnings as errors
         working-directory: godot
         run: |
-          # Every warning is set to error in project.godot, so any script
-          # problem shows up here as output. No output means clean.
-          output=$(godot --headless --quit-after 120 2>&1 | grep -v '^Godot Engine' || true)
+          # All 49 warnings are errors in project.godot, so a script problem the
+          # main scene reaches prints here. No output means clean.
+          output=$(godot --headless --quit-after 180 2>&1 | grep -v '^Godot Engine' || true)
           if [ -n "$output" ]; then
             echo "$output"
             exit 1
@@ -39,4 +50,6 @@ jobs:
 
       - name: Run the self-test
         working-directory: godot
-        run: godot --headless tests/verify.tscn --quit-after 400
+        # verify.gd quits itself with 0 or 1. One that fails to parse never quits,
+        # so the timeout turns it into a failure instead of a silent pass.
+        run: timeout 120 godot --headless tests/verify.tscn

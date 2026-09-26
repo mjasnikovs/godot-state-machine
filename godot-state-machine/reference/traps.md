@@ -13,9 +13,10 @@ Nothing in the editor warns about it. The test asserts it instead:
 
 ```gdscript
 for state: Player.State in Player.State.values():
-	var anim: Animation = player.animation.get_animation(Player.State.keys()[state])
-	if Player.blocked_states.has(state):
-		assert(anim.loop_mode == Animation.LOOP_NONE)
+	var key: String = Player.State.keys()[state]
+	var anim: Animation = player.animation.get_animation(key)
+	if Player.BLOCKED_STATES.has(state):
+		assert(anim.loop_mode == Animation.LOOP_NONE, "blocked state " + key + " loops")
 ```
 
 ## 2. A blocked state swallows damage
@@ -68,7 +69,7 @@ stop a looping walk animation being restarted from frame 0 every physics tick.
 
 It does not, because that never happens.
 
-Measured, with `play("attack")` called on every one of 12 consecutive physics frames:
+Measured, with `play(&"attack")` called on every one of 12 consecutive physics frames:
 
 ```
 repeated play('attack') position after 12 frames: 0.19327444444444 / length 0.3
@@ -86,7 +87,7 @@ this project leaves it out, and its idle animation runs normally.
 
 ## 6. Only one caller may use force_state
 
-The moment a second caller uses `force_state`, `blocked_states` stops being a
+The moment a second caller uses `force_state`, `BLOCKED_STATES` stops being a
 guarantee and becomes a suggestion. Reviewing the machine is then a search across the
 whole codebase instead of reading one file.
 
