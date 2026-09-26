@@ -7,6 +7,8 @@ class_name Verify extends Node
 # to stderr and the exit is 1. Any output at all, a parse error included, is a
 # failure.
 
+const SCRIPTS_DIR: String = "res://scripts/"
+
 var _failures: Array[String] = []
 var _checks: int = 0
 var _frame: int = 0
@@ -17,6 +19,18 @@ var _dummy_walk_position: float = 0.0
 var _dummy_position_before_repeat: float = 0.0
 var _dummy_position_after_repeat: float = 0.0
 var _sfx_calls_before_hit: int = 0
+
+
+# The main scene loads only the scripts it reaches. Loading each one by path, with
+# the autoload registered, is what catches one nothing else loads.
+func _ready() -> void:
+	var dir: DirAccess = DirAccess.open(SCRIPTS_DIR)
+	assert(dir, "verify.gd - cannot open " + SCRIPTS_DIR)
+	for file_name: String in dir.get_files():
+		if !file_name.ends_with(".gd"):
+			continue
+		var script: GDScript = load(SCRIPTS_DIR + file_name)
+		_check("script compiles: " + file_name, script != null and script.can_instantiate())
 
 
 func _physics_process(_delta: float) -> void:

@@ -33,7 +33,8 @@ func set_state(state: State) -> void:
 	set_animation()
 ```
 
-And one signal is the only way out of them.
+And one signal is the normal way out of them. `force_state` has one other caller:
+damage that must land whatever the state.
 
 ```gdscript
 	var _error: int = animation.animation_finished.connect(
@@ -76,7 +77,7 @@ with its `.gdlintrc` and `.gdformatrc`.
 
 ## Read it
 
-- **[godot-state-machine/SKILL.md](godot-state-machine/SKILL.md)** — the whole technique in 166 lines. Start here.
+- **[godot-state-machine/SKILL.md](godot-state-machine/SKILL.md)** — the whole technique in 169 lines. Start here.
 - [godot-state-machine/reference/anatomy.md](godot-state-machine/reference/anatomy.md) — both full scripts, direction
   flipping, per-state sound through an animation method track, scene wiring.
 - [godot-state-machine/reference/traps.md](godot-state-machine/reference/traps.md) — the measurements behind the
@@ -96,7 +97,7 @@ ln -s "$PWD/godot-state-machine" ~/.agents/skills/godot-state-machine   # shared
 ```
 
 It then fires on its own when you work on a Godot character state machine. Only the
-166-line `SKILL.md` sits in context; the reference files load on demand.
+169-line `SKILL.md` sits in context; the reference files load on demand.
 
 It is also just markdown. Read it directly if you would rather not install anything.
 

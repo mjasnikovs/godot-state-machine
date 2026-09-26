@@ -115,7 +115,8 @@ func take_damage() -> void:
 	set_state(State.hit)
 
 
-# Ignores BLOCKED_STATES. Only the animation_finished callback uses it.
+# Ignores BLOCKED_STATES. Two callers: the animation_finished reset, and damage that
+# must land whatever the state.
 func force_state(state: State) -> void:
 	c_state = state
 	set_animation()

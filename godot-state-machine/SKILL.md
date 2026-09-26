@@ -45,6 +45,7 @@ enum State { idle, walk, jump, fall, attack, hit }
 # States that must play to the end. set_state refuses while one is current.
 const BLOCKED_STATES: Array[State] = [State.attack, State.hit]
 
+@export_category("Nodes")
 @export var animation: AnimationPlayer
 
 var c_state: State = State.idle
@@ -53,7 +54,8 @@ var c_state: State = State.idle
 ## The three functions
 
 ```gdscript
-# Ignores BLOCKED_STATES. Only the animation_finished callback uses it.
+# Ignores BLOCKED_STATES. Two callers: the animation_finished reset, and damage that
+# must land whatever the state.
 func force_state(state: State) -> void:
 	c_state = state
 	set_animation()
@@ -75,7 +77,8 @@ func set_animation() -> void:
 
 Everything that wants to change state calls `set_state`. Nothing assigns `c_state`.
 
-`force_state` is the only way out of a blocked state, and exactly one caller uses it.
+`force_state` is the only way past a blocked state, and it has exactly two callers: the
+`animation_finished` reset below, and damage that must land whatever the state.
 
 ## The release valve
 
@@ -163,4 +166,4 @@ Trap 1 is the one that ships. Trap 2 is the one that gets argued about.
 - `reference/anatomy.md` — both full scripts, direction flipping, per-state sound
   through an AnimationPlayer method track, and the scene wiring that carries it.
 - `reference/traps.md` — the measurements behind the table above.
-- `reference/verify.md` — strict-typing settings and the 41-check headless harness.
+- `reference/verify.md` — strict-typing settings and the 44-check headless harness.

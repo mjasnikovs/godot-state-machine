@@ -24,12 +24,12 @@ godot --headless --import                     # once
 godot --headless tests/verify.tscn --quit-after 400
 ```
 
-A pass prints nothing: the harness runs 41 checks over 160 physics frames and quits
+A pass prints nothing: the harness runs 44 checks over 160 physics frames and quits
 itself with exit 0. A failure prints each failed check to stderr and exits 1.
 
 ```
 FAIL  player registered itself in Global
-FAIL  1 failures out of 41 checks (phase: jumping)
+FAIL  1 failures out of 44 checks (phase: jumping)
 ```
 
 The gate is output and exit code together, the same one `godot-code-style` uses. A
@@ -47,26 +47,27 @@ though Godot then runs until `--quit-after`.
 | force_state | `animation_finished` returns to idle unaided, and `force_state` overrides a blocked state |
 | method track | the track fired `play_sfx`, which picked a sound from the current state's array |
 | air states | jump, fall and landing each reach their state |
+| compiles | every script in `scripts/` loads by path and `can_instantiate()`, reached by the main scene or not |
 
 The contract group is the one worth stealing. It loops over `State.keys()`, so a state
 added to the enum without an animation fails the test instead of crashing a player
 months later.
 
 ```gdscript
-for key: String in Player.State.keys():
-	_check("Player animation '%s' exists for State.%s" % [key, key], player.animation.has_animation(key))
+	for key: String in Player.State.keys():
+		_check("Player animation '%s' exists for State.%s" % [key, key], player.animation.has_animation(key))
 ```
 
 And the loop-mode group, which catches trap 1 before it ships.
 
 ```gdscript
-for state: Player.State in Player.State.values():
-	var key: String = Player.State.keys()[state]
-	var anim: Animation = player.animation.get_animation(key)
-	if Player.BLOCKED_STATES.has(state):
-		_check("blocked '%s' does NOT loop" % key, anim.loop_mode == Animation.LOOP_NONE)
-	else:
-		_check("free '%s' loops" % key, anim.loop_mode != Animation.LOOP_NONE)
+	for state: Player.State in Player.State.values():
+		var key: String = Player.State.keys()[state]
+		var anim: Animation = player.animation.get_animation(key)
+		if Player.BLOCKED_STATES.has(state):
+			_check("blocked '%s' does NOT loop" % key, anim.loop_mode == Animation.LOOP_NONE)
+		else:
+			_check("free '%s' loops" % key, anim.loop_mode != Animation.LOOP_NONE)
 ```
 
 ## The full harness
@@ -83,6 +84,8 @@ class_name Verify extends Node
 # to stderr and the exit is 1. Any output at all, a parse error included, is a
 # failure.
 
+const SCRIPTS_DIR: String = "res://scripts/"
+
 var _failures: Array[String] = []
 var _checks: int = 0
 var _frame: int = 0
@@ -93,6 +96,18 @@ var _dummy_walk_position: float = 0.0
 var _dummy_position_before_repeat: float = 0.0
 var _dummy_position_after_repeat: float = 0.0
 var _sfx_calls_before_hit: int = 0
+
+
+# The main scene loads only the scripts it reaches. Loading each one by path, with
+# the autoload registered, is what catches one nothing else loads.
+func _ready() -> void:
+	var dir: DirAccess = DirAccess.open(SCRIPTS_DIR)
+	assert(dir, "verify.gd - cannot open " + SCRIPTS_DIR)
+	for file_name: String in dir.get_files():
+		if !file_name.ends_with(".gd"):
+			continue
+		var script: GDScript = load(SCRIPTS_DIR + file_name)
+		_check("script compiles: " + file_name, script != null and script.can_instantiate())
 
 
 func _physics_process(_delta: float) -> void:

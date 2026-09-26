@@ -5,18 +5,18 @@ Every number below was produced by running the project in `godot/` under Godot
 
 ## 1. A blocked state with a looping animation freezes the character
 
-`animation_finished` never fires for a looping animation. `force_state` is the only
-caller that can leave a blocked state, and it only runs from that signal. So a
-blocked state whose animation loops is a one-way door.
+`animation_finished` never fires for a looping animation. The reset that leaves a
+blocked state is `force_state` called from that signal. So a blocked state whose
+animation loops is a one-way door; only damage that must land still gets through.
 
 Nothing in the editor warns about it. The test asserts it instead:
 
 ```gdscript
-for state: Player.State in Player.State.values():
-	var key: String = Player.State.keys()[state]
-	var anim: Animation = player.animation.get_animation(key)
-	if Player.BLOCKED_STATES.has(state):
-		assert(anim.loop_mode == Animation.LOOP_NONE, "blocked state " + key + " loops")
+	for state: Player.State in Player.State.values():
+		var key: String = Player.State.keys()[state]
+		var anim: Animation = player.animation.get_animation(key)
+		if Player.BLOCKED_STATES.has(state):
+			assert(anim.loop_mode == Animation.LOOP_NONE, "blocked state " + key + " loops")
 ```
 
 ## 2. A blocked state swallows damage
@@ -29,8 +29,8 @@ Measured: `attack()` on one frame, `take_damage()` on the next, `c_state` is sti
 `State.attack`.
 
 This is the design working, not a bug. It is what makes an attack feel committed. If
-one specific source of damage must always land, that caller uses `force_state`, and
-it is the second and last caller allowed to.
+one specific source of damage must always land, that caller uses `force_state`. It is
+the second of the two callers allowed (trap 6).
 
 ## 3. A missing animation crashes on entry, not on load
 
@@ -85,11 +85,12 @@ So both variants of `set_state` are correct. Add `state == c_state` to skip redu
 work, leave it out to keep the function to one rule. The input-driven character in
 this project leaves it out, and its idle animation runs normally.
 
-## 6. Only one caller may use force_state
+## 6. force_state has exactly two callers
 
-The moment a second caller uses `force_state`, `BLOCKED_STATES` stops being a
+The `animation_finished` reset, and damage that must land whatever the state. That is
+`godot-code-style`'s rule (`reference/naming.md`).
+
+The moment a third caller uses `force_state`, `BLOCKED_STATES` stops being a
 guarantee and becomes a suggestion. Reviewing the machine is then a search across the
-whole codebase instead of reading one file.
-
-Keep it to the `animation_finished` lambda. Anything else that must interrupt a
+whole codebase instead of reading one file. Anything else that must interrupt a
 blocked state is better modelled as a state that is not blocked.
