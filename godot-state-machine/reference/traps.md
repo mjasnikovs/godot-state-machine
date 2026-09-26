@@ -9,14 +9,20 @@ Every number below was produced by running the project in `godot/` under Godot
 blocked state is `force_state` called from that signal. So a blocked state whose
 animation loops is a one-way door; only damage that must land still gets through.
 
-Nothing in the editor warns about it. The test asserts it instead:
+Nothing in the editor warns about it. The test checks it instead:
 
 ```gdscript
 	for state: Player.State in Player.State.values():
-		var key: String = Player.State.keys()[state]
+		var key: StringName = Player.State.keys()[state]
 		var anim: Animation = player.animation.get_animation(key)
 		if Player.BLOCKED_STATES.has(state):
-			assert(anim.loop_mode == Animation.LOOP_NONE, "blocked state " + key + " loops")
+			_check(
+				"blocked Player '%s' does NOT loop (or it never ends)" % key,
+				anim.loop_mode == Animation.LOOP_NONE,
+				str(anim.loop_mode)
+			)
+		else:
+			_check("free Player '%s' loops" % key, anim.loop_mode != Animation.LOOP_NONE, str(anim.loop_mode))
 ```
 
 ## 2. A blocked state swallows damage

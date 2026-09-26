@@ -54,7 +54,7 @@ added to the enum without an animation fails the test instead of crashing a play
 months later.
 
 ```gdscript
-	for key: String in Player.State.keys():
+	for key: StringName in Player.State.keys():
 		_check("Player animation '%s' exists for State.%s" % [key, key], player.animation.has_animation(key))
 ```
 
@@ -62,12 +62,16 @@ And the loop-mode group, which catches trap 1 before it ships.
 
 ```gdscript
 	for state: Player.State in Player.State.values():
-		var key: String = Player.State.keys()[state]
+		var key: StringName = Player.State.keys()[state]
 		var anim: Animation = player.animation.get_animation(key)
 		if Player.BLOCKED_STATES.has(state):
-			_check("blocked '%s' does NOT loop" % key, anim.loop_mode == Animation.LOOP_NONE)
+			_check(
+				"blocked Player '%s' does NOT loop (or it never ends)" % key,
+				anim.loop_mode == Animation.LOOP_NONE,
+				str(anim.loop_mode)
+			)
 		else:
-			_check("free '%s' loops" % key, anim.loop_mode != Animation.LOOP_NONE)
+			_check("free Player '%s' loops" % key, anim.loop_mode != Animation.LOOP_NONE, str(anim.loop_mode))
 ```
 
 ## The full harness
@@ -277,15 +281,15 @@ func _check(label: String, condition: bool, detail: String = "") -> void:
 
 func _check_animation_contract() -> void:
 	var player: Player = Global.player
-	for key: String in Player.State.keys():
+	for key: StringName in Player.State.keys():
 		_check("Player animation '%s' exists for State.%s" % [key, key], player.animation.has_animation(key))
 
 	var dummy: Dummy = Global.dummy
-	for key: String in Dummy.State.keys():
+	for key: StringName in Dummy.State.keys():
 		_check("Dummy animation '%s' exists for State.%s" % [key, key], dummy.animation.has_animation(key))
 
 	for state: Player.State in Player.State.values():
-		var key: String = Player.State.keys()[state]
+		var key: StringName = Player.State.keys()[state]
 		var anim: Animation = player.animation.get_animation(key)
 		if Player.BLOCKED_STATES.has(state):
 			_check(
@@ -297,7 +301,7 @@ func _check_animation_contract() -> void:
 			_check("free Player '%s' loops" % key, anim.loop_mode != Animation.LOOP_NONE, str(anim.loop_mode))
 
 	for state: Dummy.State in Dummy.State.values():
-		var key: String = Dummy.State.keys()[state]
+		var key: StringName = Dummy.State.keys()[state]
 		var anim: Animation = dummy.animation.get_animation(key)
 		if Dummy.BLOCKED_STATES.has(state):
 			_check("blocked Dummy '%s' does NOT loop" % key, anim.loop_mode == Animation.LOOP_NONE, str(anim.loop_mode))

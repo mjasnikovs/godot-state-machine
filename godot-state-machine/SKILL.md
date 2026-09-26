@@ -84,6 +84,8 @@ Everything that wants to change state calls `set_state`. Nothing assigns `c_stat
 
 ```gdscript
 func _ready() -> void:
+	assert(animation, "player.gd - @export animation is not set in the editor on: " + self.name)
+
 	animation.play(&"idle")
 	var _error: int = animation.animation_finished.connect(
 		func(_anim_name: StringName) -> void: force_state(State.idle)
@@ -136,7 +138,7 @@ runs, so an attack does not slide:
 		velocity.x = move_toward(velocity.x, 0.0, SPEED)
 ```
 
-## The five traps
+## The six traps
 
 Measured, not guessed. Numbers and method in `reference/traps.md`.
 
@@ -147,6 +149,7 @@ Measured, not guessed. Numbers and method in `reference/traps.md`.
 | 3 | Enum key with no animation | crashes the first time that state is entered, not at load | assert in `set_animation`, plus a test over `State.keys()` |
 | 4 | Asserting on a method track the same tick | the call has not happened yet | AnimationPlayer runs on the **idle** clock and method tracks default to **deferred** |
 | 5 | Adding `state == c_state` to stop restarts | fixes nothing that was broken | `play(X)` while X already plays keeps its position; it is an early-out, not a repair |
+| 6 | A third caller of `force_state` | `BLOCKED_STATES` stops being a guarantee and becomes a suggestion | two callers only: the `animation_finished` reset and damage that must land; anything else that must interrupt a blocked state is a state that is not blocked |
 
 Trap 1 is the one that ships. Trap 2 is the one that gets argued about.
 
