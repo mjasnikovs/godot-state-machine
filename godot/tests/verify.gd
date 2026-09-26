@@ -1,11 +1,11 @@
 class_name Verify extends Node
 # Headless self-test for the enum state machine:
 #
-#     godot --headless tests/verify.tscn
+#     godot --headless tests/verify.tscn --quit-after 400
 #
-# It quits itself: exit 0 when every check passed, 1 when one failed. A failed
-# check is written to stderr. A verify.gd that fails to parse never quits, so
-# run it under a timeout and treat anything but exit 0 as a failure.
+# Silent on a pass, and it quits itself with exit 0. A failed check is written
+# to stderr and the exit is 1. Any output at all, a parse error included, is a
+# failure.
 
 var _failures: Array[String] = []
 var _checks: int = 0

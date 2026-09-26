@@ -64,7 +64,7 @@ cd godot
 godot                                            # play
 gdformat --check scripts/ tests/
 gdlint scripts/ tests/
-timeout 120 godot --headless tests/verify.tscn   # 41 checks, exit 0 = pass
+godot --headless tests/verify.tscn --quit-after 400   # silent + exit 0 = pass
 ```
 
 Controls: `A`/`D` or arrows to move, `Space` to jump, `J` to attack. The blue square is

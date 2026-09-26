@@ -50,6 +50,13 @@ jobs:
 
       - name: Run the self-test
         working-directory: godot
-        # verify.gd quits itself with 0 or 1. One that fails to parse never quits,
-        # so the timeout turns it into a failure instead of a silent pass.
-        run: timeout 120 godot --headless tests/verify.tscn
+        run: |
+          # A pass is silent and exits 0. A failed check prints and exits 1. A
+          # verify.gd that fails to parse prints its parse error, so any output fails.
+          status=0
+          output=$(godot --headless tests/verify.tscn --quit-after 400 2>&1) || status=$?
+          output=$(echo "$output" | grep -v '^Godot Engine' || true)
+          if [ -n "$output" ] || [ "$status" != 0 ]; then
+            echo "$output"
+            exit 1
+          fi

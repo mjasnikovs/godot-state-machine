@@ -21,19 +21,20 @@ Three consequences you hit immediately.
 ```sh
 cd godot
 godot --headless --import                     # once
-timeout 120 godot --headless tests/verify.tscn
+godot --headless tests/verify.tscn --quit-after 400
 ```
 
-The harness quits itself after 160 physics frames and 41 checks: exit 0 is a pass,
-1 is a failure, and each failed check is written to stderr.
+A pass prints nothing: the harness runs 41 checks over 160 physics frames and quits
+itself with exit 0. A failure prints each failed check to stderr and exits 1.
 
 ```
 FAIL  player registered itself in Global
 FAIL  1 failures out of 41 checks (phase: jumping)
 ```
 
-Run it under a timeout. A `verify.gd` that fails to parse never quits, and the timeout
-turns that into a failure instead of an endless run.
+The gate is output and exit code together, the same one `godot-code-style` uses. A
+`verify.gd` that fails to parse prints its parse error, so it fails at once even
+though Godot then runs until `--quit-after`.
 
 ## What it proves
 
@@ -76,11 +77,11 @@ for state: Player.State in Player.State.values():
 class_name Verify extends Node
 # Headless self-test for the enum state machine:
 #
-#     godot --headless tests/verify.tscn
+#     godot --headless tests/verify.tscn --quit-after 400
 #
-# It quits itself: exit 0 when every check passed, 1 when one failed. A failed
-# check is written to stderr. A verify.gd that fails to parse never quits, so
-# run it under a timeout and treat anything but exit 0 as a failure.
+# Silent on a pass, and it quits itself with exit 0. A failed check is written
+# to stderr and the exit is 1. Any output at all, a parse error included, is a
+# failure.
 
 var _failures: Array[String] = []
 var _checks: int = 0
